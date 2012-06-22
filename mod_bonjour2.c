@@ -846,6 +846,8 @@ static void registerUser( const char* inUserName, const char* inRegNameFormat,
                         break;
                     case 'c':	// %c - computer name
                         hostRef = SCDynamicStoreCopyComputerName( NULL, NULL );
+						if (!hostRef)
+							hostRef = CFSTR("");
                         CFStringGetCString( hostRef, hostStr, sizeof(hostStr), kCFStringEncodingMacRoman ); 
                         strncat( regName, hostStr, sizeof(regName) );
                         j = j + strlen( hostStr );
@@ -953,7 +955,7 @@ static void registerUsers( const char* whichUsers, const char* regNameFormat, ui
     char* username = apr_strtok(usernames, "\n", &tok_cntx);
 	while (username) {
         struct passwd *pw;
-		if (pw = getpwnam(username)) {
+		if ((pw = getpwnam(username))) {
   			
 			if ((int)pw->pw_uid < 500) {
 				ap_log_error( APLOG_MARK, APLOG_NOERRNO|APLOG_DEBUG, 0, cmd->server,
@@ -1017,9 +1019,10 @@ static const char *processRegDefaultSite( cmd_parms *cmd, __attribute__((unused)
         if (strlen( portArg ) > 5)
             return apr_pstrcat( cmd->pool, MSG_PREFIX, "Port argument too long", NULL );
 		
-        if (!strcasecmp( portArg, "main" ))	// use port of main server
-            port = cmd->server->port;
-        else {
+        if (!strcasecmp( portArg, "main" ))	{ // use port of main server
+			if (cmd->server->port)
+				port = cmd->server->port;
+		} else {
             err = sscanf( portArg, "%" PRIu16, &port );
             if (!err)
                 return apr_pstrcat( cmd->pool, MSG_PREFIX, "Port argument not 'main' or numeric", NULL );
@@ -1079,9 +1082,10 @@ static const char *processRegUserSite( cmd_parms *cmd, __attribute__((unused)) v
         if (strlen( inPort ) > 5)
             return apr_pstrcat( cmd->pool, MSG_PREFIX, "Port argument too long", NULL );
         
-        if (!strcasecmp( inPort, "main" ))	// use port of main server
-            port = cmd->server->port;
-        else {
+        if (!strcasecmp( inPort, "main" )) {	// use port of main server
+			if (cmd->server->port)
+				port = cmd->server->port;
+		} else {
             err = sscanf( inPort, "%" PRIu16, &port );
             if (!err)
                 return apr_pstrcat( cmd->pool, MSG_PREFIX, "Port argument not 'main' or numeric", NULL );
@@ -1146,6 +1150,8 @@ static const char *processRegResource( cmd_parms *cmd, __attribute__((unused)) v
 	                break;
 	            case 'c':	// %c - computer name
 	                hostRef = SCDynamicStoreCopyComputerName( NULL, NULL );
+					if (!hostRef)
+						hostRef = CFSTR("");
 	                CFStringGetCString( hostRef, hostStr, sizeof(hostStr), kCFStringEncodingMacRoman ); 
 	                strncat( regName, hostStr, sizeof(regName) );
 	                j = j + strlen( hostStr );
@@ -1172,9 +1178,10 @@ static const char *processRegResource( cmd_parms *cmd, __attribute__((unused)) v
         if (strlen( portArg ) > 5)
             return apr_pstrcat( cmd->pool, MSG_PREFIX, "Port argument too long", NULL );
 
-        if (!strcasecmp( portArg, "main" ))	// use port of main server
-            port = cmd->server->port;
-        else {
+        if (!strcasecmp( portArg, "main" ))	{ // use port of main server
+			if (cmd->server->port)
+				port = cmd->server->port;
+		} else {
             err = sscanf( portArg, "%" PRIu16, &port );
             if (!err)
                 return apr_pstrcat( cmd->pool, MSG_PREFIX, "Port argument not 'main' or numeric", NULL );
@@ -1236,18 +1243,19 @@ static int bonjourPostConfig( apr_pool_t *p, __attribute__((unused)) apr_pool_t 
 	__attribute__((unused)) apr_pool_t *ptemp, server_rec *serverData ) {
 /* 
 	Called during bootstrap and again for real a second time.
-	Walk through the configuration and perform the appropriate registrations.
+	Walk through the configuration to find the module_cfg and perform the appropriate registrations.
 */
-	server_cfg_rec *server_cfg = ap_get_module_config(serverData->module_config, &bonjour_module);
-	if (!server_cfg)
-		return OK;
-    module_cfg_rec *module_cfg = server_cfg->module_cfg;
-	
-    if (!module_cfg) {
-		ap_log_error( APLOG_MARK, APLOG_NOERRNO|APLOG_DEBUG, 0, serverData,
-            "%s module config not set pid=%d.", MSG_PREFIX, getpid());
-		return !OK;
+	module_cfg_rec *module_cfg = NULL;
+	server_rec *server;
+	for (server = serverData; server; server = server->next) {
+		server_cfg_rec *server_cfg = ap_get_module_config(server->module_config, &bonjour_module);
+		if (server_cfg && server_cfg->module_cfg) {
+			module_cfg = server_cfg->module_cfg;
+			break;
+		}
 	}
+    if (!module_cfg)
+		return OK;
 
 	apr_pool_t *pPool = serverData->process->pool;
 		/* Ensure that we only init once. */

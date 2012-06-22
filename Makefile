@@ -17,14 +17,17 @@
 # limitations under the License.
 #
 
+-include /AppleInternal/ServerTools/ServerBuildVariables.xcconfig
+
 MODULE_NAME = mod_bonjour
 MODULE_SRC2 = $(MODULE_NAME)2.c
 MODULE = $(MODULE_NAME).so
 OTHER_SRC = 
 HEADERS =
+export LTFLAGS = --tag=CC
 APXS2=/usr/sbin/apxs
 SRCFILES = Makefile $(MODULE_SRC) $(MODULE_SRC2) $(OTHER_SRC) $(HEADERS)
-INSTALLDIR2 := $(shell $(APXS2) -q LIBEXECDIR)
+INSTALLDIR = $(SERVER_INSTALL_PATH_PREFIX)/$(shell $(APXS2) -q LIBEXECDIR)
 
 MORE_FLAGS += -Wc,"$(RC_CFLAGS) -Wmost -W -g"
 MORE_FLAGS += -Wl,"$(RC_CFLAGS) -framework SystemConfiguration -framework CoreFoundation"
@@ -47,11 +50,11 @@ installhdrs:
 
 install: $(MODULE)
 	@echo "Installing Apache 2.2 module..."
-	$(MKDIRS) $(SYMROOT)$(INSTALLDIR2)
-	$(CP) .libs/$(MODULE) $(SYMROOT)$(INSTALLDIR2)
-	$(CHMOD) 755 $(SYMROOT)$(INSTALLDIR2)/$(MODULE)
-	$(MKDIRS) $(DSTROOT)$(INSTALLDIR2)
-	$(STRIP) -x $(SYMROOT)$(INSTALLDIR2)/$(MODULE) -o $(DSTROOT)$(INSTALLDIR2)/$(MODULE)
+	$(MKDIRS) $(SYMROOT)$(INSTALLDIR)
+	$(CP) .libs/$(MODULE) $(SYMROOT)$(INSTALLDIR)
+	$(CHMOD) 755 $(SYMROOT)$(INSTALLDIR)/$(MODULE)
+	$(MKDIRS) $(DSTROOT)$(INSTALLDIR)
+	$(STRIP) -x $(SYMROOT)$(INSTALLDIR)/$(MODULE) -o $(DSTROOT)$(INSTALLDIR)/$(MODULE)
 
 clean:
 	@echo "== Cleaning $(MODULE_NAME) =="
