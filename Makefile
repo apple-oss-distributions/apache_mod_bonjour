@@ -1,5 +1,5 @@
 #
-# Copyright (c) 1999-2008 Apple Inc.  All Rights Reserved.
+# Copyright (c) 1999-2013 Apple Inc.  All Rights Reserved.
 # 
 # This file contains Original Code and/or Modifications of Original Code
 # as defined in and that are subject to the Apple Public Source License
@@ -27,7 +27,7 @@ HEADERS =
 export LTFLAGS = --tag=CC
 APXS2=/usr/sbin/apxs
 SRCFILES = Makefile $(MODULE_SRC) $(MODULE_SRC2) $(OTHER_SRC) $(HEADERS)
-INSTALLDIR = $(SERVER_INSTALL_PATH_PREFIX)/$(shell $(APXS2) -q LIBEXECDIR)
+INSTALLDIR = $(SERVER_INSTALL_PATH_PREFIX)$(shell $(APXS2) -q LIBEXECDIR)
 
 MORE_FLAGS += -Wc,"$(RC_CFLAGS) -Wmost -W -g"
 MORE_FLAGS += -Wl,"$(RC_CFLAGS) -framework SystemConfiguration -framework CoreFoundation"
